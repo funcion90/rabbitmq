@@ -127,23 +127,24 @@ void on_signal(uv_signal_t* in_sig, int in_signum) noexcept {
 
 // ---------------------------------------------------------------------------
 // 공개 entry — node_runtime.hpp 의 start_node 정의.
+// 채널은 in_ctx->Channel 에서만 참조 — 매개변수 중복 제거로 inconsistency 차단.
 // ---------------------------------------------------------------------------
-void start_node(uv_loop_t*        in_loop,
-                AMQP::TcpChannel* in_channel,
-                NodeContext*      in_ctx,
-                uint64_t          in_interval_ms) {
-    const auto queue_name = std::format("sample.node.{}", in_ctx->NodeId);
+void start_node(uv_loop_t*   in_loop,
+                NodeContext* in_ctx,
+                uint64_t     in_interval_ms) {
+    auto* const channel    = in_ctx->Channel;
+    const auto  queue_name = std::format("sample.node.{}", in_ctx->NodeId);
 
     uvx::log::info("[{}] declaring exchange={} queue={}", in_ctx->NodeId,
                    in_ctx->Exchange, queue_name);
 
     // fanout 이라 routing key 무의미. 큐는 노드별 고유.
-    in_channel->declareExchange(in_ctx->Exchange, AMQP::fanout, AMQP::durable);
-    in_channel->declareQueue(queue_name, AMQP::durable);
-    in_channel->bindQueue(in_ctx->Exchange, queue_name, "");
+    channel->declareExchange(in_ctx->Exchange, AMQP::fanout, AMQP::durable);
+    channel->declareQueue(queue_name, AMQP::durable);
+    channel->bindQueue(in_ctx->Exchange, queue_name, "");
 
     // 구독 — 자기 큐. sender 헤더로 자기/타인 구분 표시.
-    in_channel->consume(queue_name, AMQP::noack)
+    channel->consume(queue_name, AMQP::noack)
         .onReceived([in_ctx](const AMQP::Message& in_msg, uint64_t /*in_tag*/, bool /*in_redelivered*/) {
             const auto              body   = std::string_view(in_msg.body(), in_msg.bodySize());
             const std::string&      sender = in_msg.headers().get("sender");

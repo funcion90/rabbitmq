@@ -1,6 +1,7 @@
 ﻿#include <uv.h>
 
 #include <amqpcpp.h>
+#include <amqpcpp/linux_tcp.h>   // IWYU: AMQP::TcpConnection / AMQP::TcpChannel 직접 사용
 
 #include "uvx/core/log.hpp"
 
@@ -71,7 +72,7 @@ int main() {
             .ShutdownStarted = false,
         };
 
-        start_node(loop, &channel, node_ctx, interval_ms);
+        start_node(loop, node_ctx, interval_ms);
 
         const int run_rc = uv_run(loop, UV_RUN_DEFAULT);
         if (0 != run_rc) {

@@ -43,11 +43,11 @@ struct NodeContext {
 // 호출 후 호출자(main)가 uv_run 진입.
 //
 //   - in_loop:        uv_default_loop() 결과
-//   - in_channel:     이미 connection 과 묶인 채널 (수명은 호출자가 보장)
-//   - in_ctx:         heap 으로 할당된 NodeContext, 위 작업으로 채워짐
+//   - in_ctx:         heap 으로 할당된 NodeContext (Channel/Connection/NodeId/Exchange 등
+//                     입력 필드가 채워진 상태). PublishTimer/LingerTimer/SigInt/SigTerm 은
+//                     이 함수가 채움
 //   - in_interval_ms: publish 타이머 간격
 // ---------------------------------------------------------------------------
-void start_node(uv_loop_t*        in_loop,
-                AMQP::TcpChannel* in_channel,
-                NodeContext*      in_ctx,
-                uint64_t          in_interval_ms);
+void start_node(uv_loop_t*   in_loop,
+                NodeContext* in_ctx,
+                uint64_t     in_interval_ms);
