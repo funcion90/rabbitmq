@@ -23,12 +23,21 @@ endif()
 # ---------------------------------------------------------------------------
 # AMQP-CPP 의 linux_tcp 모듈은 POSIX 전용(sys/socket, poll, dlopen, OpenSSL).
 # 네이티브 Windows 빌드는 지원하지 않는다 — Docker(권장) 또는 WSL 사용.
+# macOS 는 POSIX 라 컴파일 자체는 시도되지만, OpenSSL dlopen 의 dylib 경로 차이로
+# 런타임 에러가 발생할 수 있다. 검증된 환경은 Linux / Docker / WSL 만이다.
 # ---------------------------------------------------------------------------
 if(WIN32 AND NOT CYGWIN)
     message(FATAL_ERROR
         "Native Windows build is not supported.\n"
         "Use the provided Dockerfile / docker-compose, or build under WSL.\n"
         "Reason: AMQP-CPP linux_tcp module uses POSIX-only APIs.")
+endif()
+
+if(APPLE)
+    message(WARNING
+        "macOS native build is untested. AMQP-CPP linux_tcp uses dlopen(libssl) "
+        "which may fail to find OpenSSL dylibs on macOS. "
+        "If you hit OpenSSL runtime errors, use the provided Docker workflow instead.")
 endif()
 
 # ---------------------------------------------------------------------------

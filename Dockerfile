@@ -25,12 +25,24 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY . /src
 
-# 서브모듈이 이미 체크아웃되어 함께 COPY 된 상태이므로 별도 init 불필요.
-RUN cmake -S . -B build \
-        -DCMAKE_BUILD_TYPE=Release \
- && cmake --build build --parallel --target rmq_node
+# 레이어 캐시 최적화: 잘 변하지 않는 것부터 먼저 복사.
+#   - third_party/ (libuv + AMQP-CPP 서브모듈) → 서브모듈 bump 시에만 변경
+#   - CMakeLists.txt → 빌드 시스템 변경 시
+#   - src/         → 우리 코드 (가장 자주 변경)
+# src/ 만 바뀌면 third_party 컴파일 결과가 캐시에서 재사용되어 30초 이내 재빌드 가능.
+COPY third_party/ /src/third_party/
+COPY CMakeLists.txt /src/
+COPY src/ /src/src/
+
+# BuildKit cache mount 로 /src/build 를 빌드 간 영속화. src/ 만 바뀐 경우
+# CMake 의 incremental build 가 third_party 의 객체 파일을 재사용해 약 5초 이내 완료.
+# 캐시 mount 는 이미지 레이어에 포함되지 않으므로, 산출된 바이너리는 RUN 내에서
+# /src 로 별도 복사하여 다음 stage 의 COPY --from 에 노출시킨다.
+RUN --mount=type=cache,target=/src/build,sharing=locked \
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build build --parallel --target rmq_node \
+ && cp build/rmq_node /src/rmq_node
 
 # ---------------------------------------------------------------------------
 # 2) runtime
@@ -43,7 +55,7 @@ RUN apt-get update \
         ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /src/build/rmq_node /usr/local/bin/rmq_node
+COPY --from=builder /src/rmq_node /usr/local/bin/rmq_node
 
 # NODE_ID 등의 환경변수는 compose 에서 주입.
 CMD ["/usr/local/bin/rmq_node"]

@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace {
 
@@ -22,7 +23,10 @@ namespace {
 // ---------------------------------------------------------------------------
 constexpr std::string_view kDefaultUrl()        { return "amqp://guest:guest@localhost/"; }
 constexpr std::string_view kDefaultExchange()   { return "sample.fanout"; }
-constexpr std::string_view kDefaultNodeId()     { return "node"; }
+// "unset" 은 함정 회피용 sentinel — main 에서 검증하여 에러로 변환.
+// 의도된 동작: 두 인스턴스를 띄울 땐 반드시 NODE_ID 를 각자 다르게 지정해야
+// 큐가 분리되어 양방향 fanout 이 의도대로 동작한다. 같은 ID 면 work queue 가 됨.
+constexpr std::string_view kDefaultNodeId()     { return "unset"; }
 constexpr int              kDefaultCount()      { return 10; }
 constexpr uint64_t         kDefaultIntervalMs() { return 500; }
 constexpr uint64_t         kDefaultLingerMs()   { return 3000; }
@@ -169,7 +173,7 @@ void on_publish_tick(uv_timer_t* in_timer) noexcept {
     AMQP::Envelope envelope(payload.data(), payload.size());
     AMQP::Table    headers;
     headers.set("sender", node->NodeId);
-    envelope.setHeaders(headers);
+    envelope.setHeaders(std::move(headers));  // Table&& 오버로드로 복사 회피
 
     const bool ok = node->Channel->publish(node->Exchange, "", envelope);
     if (false == ok) {
@@ -222,6 +226,14 @@ int main() {
         const auto publish_count = env_int_or("PUBLISH_COUNT", kDefaultCount());
         const auto interval_ms   = env_u64_or("PUBLISH_INTERVAL_MS", kDefaultIntervalMs());
         const auto linger_ms     = env_u64_or("LINGER_MS", kDefaultLingerMs());
+
+        // NODE_ID 미설정 함정 차단: 같은 ID 두 인스턴스 = 같은 큐 = work queue 패턴
+        // (fanout 의도와 다르게 메시지가 라운드로빈 분배되어 한쪽만 받음).
+        if (node_id == kDefaultNodeId()) {
+            throw std::runtime_error(
+                "NODE_ID 환경변수 필수. 예: NODE_ID=A ./rmq_node "
+                "(두 인스턴스를 띄울 땐 서로 다른 값으로)");
+        }
 
         const auto queue_name = std::format("sample.node.{}", node_id);
 
