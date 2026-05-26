@@ -1,0 +1,31 @@
+# 기본: 텍스트로 인식, 플랫폼별 EOL 자동 결정
+* text=auto
+
+# C++ 소스: UTF-8 BOM + CRLF (cpp-patterns 규칙)
+*.cpp  text eol=crlf working-tree-encoding=UTF-8
+*.hpp  text eol=crlf working-tree-encoding=UTF-8
+*.h    text eol=crlf working-tree-encoding=UTF-8
+*.inl  text eol=crlf working-tree-encoding=UTF-8
+
+# 빌드 스크립트/설정: LF (Linux 컨테이너에서 실행되므로)
+*.sh         text eol=lf
+Dockerfile   text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+.dockerignore text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+
+# CMake: LF (cmake 자체는 둘 다 OK 이지만 Linux 빌드 기본)
+CMakeLists.txt text eol=lf
+*.cmake        text eol=lf
+
+# 마크다운: LF
+*.md text eol=lf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.ico binary
+*.so  binary
+*.a   binary

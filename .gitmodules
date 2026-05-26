@@ -1,0 +1,6 @@
+[submodule "third_party/libuv"]
+	path = third_party/libuv
+	url = https://github.com/funcion90/libuv.git
+[submodule "third_party/AMQP-CPP"]
+	path = third_party/AMQP-CPP
+	url = https://github.com/CopernicaMarketingSoftware/AMQP-CPP.git

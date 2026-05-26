@@ -1,0 +1,41 @@
+# =========================================================================
+# RabbitMQ 브로커 단독 compose
+#
+# 사용:
+#   cd docker/broker
+#   docker compose up -d
+#
+# 종료:
+#   docker compose down
+#
+# 포트:
+#   5672    AMQP (클라이언트가 접속)
+#   15672   관리 콘솔 (http://localhost:15672  guest / guest)
+#
+# 네트워크:
+#   "rmq_net" 라는 named network 를 생성한다.
+#   docker/sample/docker-compose.yml 에서 external 로 join 하여 같은 broker 와 통신.
+# =========================================================================
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rmq_broker
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    # ping 은 Erlang VM 만 검사 → AMQP 5672 listener accept 가능 시점까지 대기시키려면
+    # check_port_connectivity 가 정확.
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+networks:
+  # compose 의 default 네트워크를 외부 식별 가능한 고정 이름으로 노출.
+  # 다른 compose 가 external: true 로 끌어다 쓴다.
+  default:
+    name: rmq_net

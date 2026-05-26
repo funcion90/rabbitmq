@@ -1,0 +1,23 @@
+# CMake 빌드 산출물
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 임시
+*.log
+*.tmp
+*~
+
+# skill-creator 의 이터레이션 워크스페이스 (eval 데이터, 벤치마크 산출물)
+.claude/skills/*-workspace/

@@ -1,0 +1,85 @@
+# =========================================================================
+# 샘플 — 동일 바이너리(rmq_node) 두 인스턴스가 fanout exchange 를 통해
+# 서로 메시지를 주고받는 ping-pong 토폴로지.
+#
+# 전제: docker/broker/docker-compose.yml 가 먼저 떠 있어야 한다 (rmq_net 생성).
+#
+# 사용:
+#   cd docker/sample
+#   docker compose up --build --abort-on-container-exit --exit-code-from node_a
+#
+# 진행:
+#   1) node_a, node_b 둘 다 떠서 broker:5672 폴링 → 접속
+#   2) 각자 'sample.fanout' exchange 에 자기 큐(sample.node.A / sample.node.B) 바인딩
+#   3) 동시에 발행 시작 — 매 500ms 마다 1개 → fanout 이라 두 큐 모두 복제 수신
+#   4) 각 노드는 자기/상대 메시지를 모두 받음 ([SELF]/[RX] 로 구분 로그)
+#   5) PUBLISH_COUNT 다 보내고 LINGER_MS 지나면 graceful shutdown
+#
+# 출력 예 (시간 표시 생략):
+#   [A] PUB [A] msg #1
+#   [B] RX  from=A : [A] msg #1
+#   [A] SELF from=A : [A] msg #1
+#   [B] PUB [B] msg #1
+#   [A] RX  from=B : [B] msg #1
+#   [B] SELF from=B : [B] msg #1
+#   ...
+# =========================================================================
+
+services:
+  node_a:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: rabbitmq-sample:latest
+    container_name: rmq_node_a
+    command:
+      - bash
+      - -c
+      - |
+        until (echo > /dev/tcp/rabbitmq/5672) 2>/dev/null; do
+            echo "[entry][A] waiting for rabbitmq:5672 ..."
+            sleep 1
+        done
+        echo "[entry][A] broker reachable, starting node"
+        exec /usr/local/bin/rmq_node
+    environment:
+      NODE_ID:              "A"
+      RABBITMQ_URL:         "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_EXCHANGE:    "sample.fanout"
+      PUBLISH_COUNT:        "10"
+      PUBLISH_INTERVAL_MS:  "500"
+      LINGER_MS:            "3000"
+    networks:
+      - default
+    restart: "no"
+
+  node_b:
+    image: rabbitmq-sample:latest
+    container_name: rmq_node_b
+    command:
+      - bash
+      - -c
+      - |
+        until (echo > /dev/tcp/rabbitmq/5672) 2>/dev/null; do
+            echo "[entry][B] waiting for rabbitmq:5672 ..."
+            sleep 1
+        done
+        echo "[entry][B] broker reachable, starting node"
+        exec /usr/local/bin/rmq_node
+    environment:
+      NODE_ID:              "B"
+      RABBITMQ_URL:         "amqp://guest:guest@rabbitmq:5672/"
+      RABBITMQ_EXCHANGE:    "sample.fanout"
+      PUBLISH_COUNT:        "10"
+      PUBLISH_INTERVAL_MS:  "500"
+      LINGER_MS:            "3000"
+    depends_on:
+      - node_a   # 이미지 빌드는 node_a 가 담당. 시작 순서엔 의미 없음.
+    networks:
+      - default
+    restart: "no"
+
+networks:
+  default:
+    name: rmq_net
+    external: true

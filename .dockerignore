@@ -1,0 +1,29 @@
+# 빌드 컨텍스트에서 제외 (도커 빌드 속도/이미지 크기 개선)
+
+# Git 메타데이터
+.git
+.gitignore
+.gitattributes
+**/.git
+**/.gitignore
+
+# 빌드 산출물
+build/
+out/
+**/build/
+
+# IDE/에디터
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 도구가 만든 임시
+*.log
+*.tmp
+
+# 도커 자체 (이미지 빌드 context 에 들어갈 필요 없는 것들)
+Dockerfile
+docker/
+.dockerignore
+README.md
