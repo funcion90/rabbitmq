@@ -62,6 +62,16 @@ add_subdirectory(third_party/AMQP-CPP EXCLUDE_FROM_ALL)
 # 샘플 타겟 — 단일 바이너리.
 #   동일 바이너리가 NODE_ID 별로 fanout exchange 에 publish + 자기 큐 subscribe 를
 #   모두 수행한다. 2 인스턴스 띄우면 서로 메시지 주고받는 ping-pong 데모.
+#
+# 구조:
+#   main.cpp           — env 로딩 + AMQP 연결/채널/핸들러 생성 + start_node 호출 + uv_run
+#   env_helper.hpp     — env_or / env_int_or / env_u64_or (헤더 onlly)
+#   node_handler.cpp   — NodeHandler (AMQP::LibUvHandler 상속, 연결 이벤트 로깅)
+#   node_runtime.cpp   — NodeContext 상태 + libuv 콜백들 + start_node 본체
 # ---------------------------------------------------------------------------
-add_executable(rmq_node src/node/main.cpp)
+add_executable(rmq_node
+    src/node/main.cpp
+    src/node/node_handler.cpp
+    src/node/node_runtime.cpp
+)
 target_link_libraries(rmq_node PRIVATE uvx_common amqpcpp)
